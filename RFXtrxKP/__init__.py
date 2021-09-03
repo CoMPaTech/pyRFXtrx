@@ -50,7 +50,7 @@ class RFXtrxDevice:
         self.type_string = pkt.type_string
         self.id_string = pkt.id_string
         self.known_to_be_dimmable = False
-        self.known_to_be_rollershutter = False
+        self.known_to_be_rollershutter = True
 
     def __eq__(self, other):
         if self.packettype != other.packettype:
@@ -226,9 +226,13 @@ class LightingDevice(RFXtrxDevice):
                              command)
             transport.send(pkt.data)
         elif self.packettype == 0x13:  # Lighting4
+            _LOGGER.debug("RFXtrxKP Reached lighting4 send_command %s", command)
             pkt = lowlevel.Lighting4()
             code = self.cmd & ~1
+            _LOGGER.debug("RFXtrxKP Code is %s from self.cmd", code)
             code |= command
+            _LOGGER.debug("RFXtrxKP Code is %s from command", code)
+            code = command
             pkt.set_transmit(self.subtype, 0, code, self.pulse)
             transport.send(pkt.data)
         elif self.packettype == 0x14:  # Lighting5
@@ -274,12 +278,17 @@ class LightingDevice(RFXtrxDevice):
     def send_openclosestop(self, transport, command):
         """ Send an 'Open' or a 'Close' or a 'Stop' command
             using the given transport """
+        _LOGGER.debug("RFXtrxKP command %s", command)
         if self.packettype == 0x14:  # Lighting5
             if command not in [0x0d, 0x0e, 0x0f]:
                 raise ValueError(command, "is not a relay packet in Lighting5")
             self.send_command(transport, command)
+        elif self.packettype == 0x19:  # Lighting4
+            self.send_command(transport, command)
+        elif self.packettype == 0x13:  # Lighting4
+            self.send_command(transport, command)
         else:
-            raise ValueError("Unsupported packettype")
+            raise ValueError("Unsupported packettype %s", self.packettype)
 
     def send_open(self, transport):
         """ Send an 'Open' command using the given transport """

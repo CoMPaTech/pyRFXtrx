@@ -28,6 +28,9 @@ RFXtrx.
 # Packet class
 ###############################################################################
 
+import logging
+_LOGGER = logging.getLogger(__name__)
+
 
 class Packet():
     """ Abstract superclass for all low level packets """
@@ -602,7 +605,8 @@ class Lighting4(Packet):
     Data class for the Lighting4 packet type
     """
 
-    TYPES = {0x00: 'PT2262'}
+    TYPES = {0x00: 'PT2262', 0x20: 'Kingpin'}
+
     """
     Mapping of numeric subtype values to strings, used in type_string
     """
@@ -614,6 +618,12 @@ class Lighting4(Packet):
                 0x05: 'On',
                 0x07: 'On',
                 0x09: 'On',
+                0x22: 'Up',
+                0x24: 'Stop',
+                0x28: 'Down',
+                0x15: 'Up',
+                0x14: 'Stop',
+                0x13: 'Down',
                 0x0c: 'On'}
     """
     Mapping of command numeric values to strings, used for cmnd_string
@@ -685,11 +695,26 @@ class Lighting4(Packet):
         self.pulselow = self.pulse & 0xff
         self.rssi_byte = 0
         self.rssi = 0
+
+        if self.cmd == 15:
+            self.cmd = 0x22
+        if self.cmd == 14:
+            self.cmd = 0x24
+        if self.cmd == 13:
+            self.cmd = 0x28
+
         self.data = bytearray([self.packetlength, self.packettype,
                                self.subtype, self.seqnbr,
                                self.cmd1, self.cmd2, self.cmd3,
                                self.pulsehigh, self.pulselow, self.rssi_byte])
+        self.data = bytearray([0x09,0x13,0x00,0x11,0xE1,0x42,self.cmd,0x04,0x10,0x00])
         self._set_strings()
+        _LOGGER.debug("RFXtrxKP sending ask for %s", self.cmd)
+        _LOGGER.debug("RFXtrxKP sending ask for %s", self.cmd1)
+        _LOGGER.debug("RFXtrxKP sending ask for %s", self.cmd2)
+        _LOGGER.debug("RFXtrxKP sending ask for %s", self.cmd3)
+        _LOGGER.debug("RFXtrxKP sending %s", self.data)
+        _LOGGER.debug("RFXtrxKP sending cmd %s", self.cmnd_string)
 
     def _set_strings(self):
         """Translate loaded numeric values into convenience strings"""
@@ -2726,7 +2751,9 @@ PACKET_TYPES = {
 
 def get_packet(packettype):
     """Return a packet based on the packet type."""
+    _LOGGER.debug("RFXtrxKP get_packet %s", packettype)
     cls = PACKET_TYPES.get(packettype)
+    _LOGGER.debug("RFXtrxKP get_packet cls %s", cls)
     if cls is None:
         return None
     return cls()
@@ -2734,24 +2761,33 @@ def get_packet(packettype):
 
 def get_packet_with_id(packettype, subtype, id_string):
     """Return a packet based on the type and identifiers."""
+    _LOGGER.debug("RFXtrxKP get_packet_with_id packettype %s", packettype)
+    _LOGGER.debug("RFXtrxKP get_packet_with_id subtype %s", subtype)
+    _LOGGER.debug("RFXtrxKP get_packet_with_id id_string %s", id_string)
     pkt = get_packet(packettype)
+    _LOGGER.debug("RFXtrxKP get_packet_with_id pkt %s", pkt)
     if pkt is None or not hasattr(pkt, "parse_id"):
         return None
     pkt.parse_id(subtype, id_string)
+    _LOGGER.debug("RFXtrxKP get_packet_with_id pkt %s", pkt)
     return pkt
 
 
 def parse(data):
     """ Parse a packet from a bytearray """
+    _LOGGER.debug("RFXtrxKP Parsing data %s", data)
     if data[0] == 0 or len(data) < 2:
         # null length packet - sometimes happens on initialization
+        _LOGGER.debug("RFXtrxKP Parsing null length")
         return None
 
     expected_length = data[0] + 1
     if len(data) != expected_length:
+        _LOGGER.debug("RFXtrxKP Parsing not expected length")
         return None
 
     pkt = get_packet(data[1])
+    _LOGGER.debug("RFXtrxKP Parsing getpacket to %s", pkt)
     if pkt is None:
         return None
 
@@ -2759,6 +2795,7 @@ def parse(data):
         pkt.load_receive(data)
     except IndexError:
         # parsing failed due to invalid packet length
+        _LOGGER.debug("RFXtrxKP Parsing invalid packet length")
         return None
 
     return pkt

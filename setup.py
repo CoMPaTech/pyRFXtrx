@@ -23,14 +23,14 @@ If not, see <http://www.gnu.org/licenses/>.
 from setuptools import setup
 
 setup(
-    name = 'pyRFXtrx',
-    packages = ['RFXtrx'],
+    name = 'pyRFXtrxKP',
+    packages = ['RFXtrxKP'],
     install_requires=['pyserial>=2.7'],
-    version = '0.27.0',
+    version = '0.27.1',
     description = 'a library to communicate with the RFXtrx family of devices',
     author='Edwin Woudt',
     author_email='edwin@woudt.nl',
-    url='https://github.com/Danielhiversen/pyRFXtrx',
+    url='https://github.com/CoMPaTech/pyRFXtrx',
     classifiers=[
         'Development Status :: 3 - Alpha',
         'Environment :: Other Environment',
